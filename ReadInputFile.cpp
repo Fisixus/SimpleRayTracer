@@ -76,7 +76,7 @@ void ReadInputFile::readInputandFillSceneElements(string &inputFilename) {
 
 			else if (counter == 6) {
 				for (int i = 0; i < totalNumofPigments; i++) {
-					std::stringstream ss(line);
+					stringstream ss(line);
 					Pigment pigment;
 					string type;
 					float r, g, b;
@@ -102,7 +102,7 @@ void ReadInputFile::readInputandFillSceneElements(string &inputFilename) {
 
 			else if (counter == 8) {
 				for (int i = 0; i < totalNumofSurfaces; i++) {
-					std::stringstream ss(line);
+					stringstream ss(line);
 					Surface surface;
 					float ka, kd, ks, shineness, kr;
 					ss >> ka >> kd >> ks >> shineness >> kr;
@@ -127,7 +127,7 @@ void ReadInputFile::readInputandFillSceneElements(string &inputFilename) {
 
 			else if (counter == 10) {
 				for (int i = 0; i < totalNumofObj3Ds; i++) {
-					std::stringstream ss(line);
+ 					stringstream ss(line);
 					Object3D object3D;
 					string type;
 					int numPigment, numSurface;
