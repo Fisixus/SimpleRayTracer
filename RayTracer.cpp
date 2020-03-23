@@ -4,19 +4,11 @@
 using namespace Angel;
 using namespace std;
 
-void writeOutputPixels();
-int sphereIntersectionControl(Object3D &obj3D, Ray &ray, int counter);
-color3 trace(Ray &ray);
-bool isVisible(LightSource &lightSource);
-color3 objectAmbientColor();
-color3 phongModel(LightSource &lightSource);
-
+#define EPS 0.001 //for numerical issues
 typedef vec3 point3;
 typedef vec3 color3;
-#define EPS 0.001 //for numerical issues
-
 const color3 background_color = color3(0.5, 0.5, 0.5);
-enum { No_InterSection = 0, InterSection = 1};
+enum { No_InterSection = 0, InterSection = 1 };
 int status = No_InterSection;
 
 typedef struct {
@@ -25,9 +17,20 @@ typedef struct {
 	vec3 direction;
 }Ray;
 
+void initiliazeSceneValues();
+void writePixelsToOutputfile();
+int sphereIntersectionControl(Object3D &obj3D, Ray &ray, int counter);
+color3 trace(Ray &ray);
+bool isVisible(LightSource &lightSource);
+color3 objectAmbientColor();
+color3 phongModel(LightSource &lightSource);
+
+
+
 color3** outputPixels;
 ReadInputFile rif;
 string inputFilename = "test1.in";
+string outputFilename;
 int columns;
 int rows;
 vector<LightSource> lightSources;
@@ -39,6 +42,7 @@ bool intersectionInInside = false;
 point3 sphereIntersectionPoint;
 vec3 sphereIntersectionNormal;
 int whichObjectNum = 0;
+bool visibilityControl = false;
 
 int main(int argc, char **argv) {
 	initiliazeSceneValues();
@@ -64,7 +68,7 @@ int main(int argc, char **argv) {
 			outputPixels[i][j] = trace(ray);
 		}
 	}
-	writeOutputPixels();
+	//writePixelsToOutputfile();
 	return 0;
 }
 
@@ -77,11 +81,13 @@ void initiliazeSceneValues() {
 	surfaces = rif.getSurfaces();
 	pigments = rif.getPigments();
 	object3Ds = rif.getObject3Ds();
+	outputFilename = rif.getOutputFileName();
 }
 
 
 color3 trace(Ray &ray) {
 	color3 localC;
+	visibilityControl = false;
 	int counter = 0;
 	for (auto &obj3D : object3Ds) // access by reference to avoid copying
 	{
@@ -133,7 +139,9 @@ color3 objectAmbientColor() {
 	return Ia * pigmentColor;
 }
 
+
 bool isVisible(LightSource &lightSource) {
+	visibilityControl = true;
 	//sphereIntersection Point to lightSource
 	Ray ray;
 	ray.origin = sphereIntersectionPoint;
@@ -173,24 +181,30 @@ int sphereIntersectionControl(Object3D &obj3D, Ray &ray, int counter) {
 
 		else if (firstRoot > EPS && secondRoot < EPS) {
 			intersectionInInside = true;
-			sphereIntersectionPoint = ray.origin + firstRoot * ray.direction;
-			sphereIntersectionNormal = -normalize(sphereIntersectionPoint - obj3D.center);
+			if (!visibilityControl) {
+				sphereIntersectionPoint = ray.origin + firstRoot * ray.direction;
+				sphereIntersectionNormal = -normalize(sphereIntersectionPoint - obj3D.center);
+			}
 		}
 
 		else if (firstRoot < EPS && secondRoot > EPS) {
 			intersectionInInside = true;
-			sphereIntersectionPoint = ray.origin + secondRoot * ray.direction;
-			sphereIntersectionNormal = -normalize(sphereIntersectionPoint - obj3D.center);
+			if (!visibilityControl) {
+				sphereIntersectionPoint = ray.origin + secondRoot * ray.direction;
+				sphereIntersectionNormal = -normalize(sphereIntersectionPoint - obj3D.center);
+			}
 		}
 
 		else if (firstRoot > EPS && secondRoot > EPS) {
-			if (firstRoot > secondRoot) {
-				sphereIntersectionPoint = ray.origin + secondRoot * ray.direction;
-				sphereIntersectionNormal = normalize(sphereIntersectionPoint - obj3D.center);
-			}
-			else {
-				sphereIntersectionPoint = ray.origin + firstRoot * ray.direction;
-				sphereIntersectionNormal = normalize(sphereIntersectionPoint - obj3D.center);
+			if (!visibilityControl) {
+				if (firstRoot > secondRoot) {
+					sphereIntersectionPoint = ray.origin + secondRoot * ray.direction;
+					sphereIntersectionNormal = normalize(sphereIntersectionPoint - obj3D.center);
+				}
+				else {
+					sphereIntersectionPoint = ray.origin + firstRoot * ray.direction;
+					sphereIntersectionNormal = normalize(sphereIntersectionPoint - obj3D.center);
+				}
 			}
 		}
 		whichObjectNum = counter;
@@ -199,6 +213,17 @@ int sphereIntersectionControl(Object3D &obj3D, Ray &ray, int counter) {
 	
 }
 
-void writeOutputPixels() {
-
+void writePixelsToOutputfile() {
+	FILE *fp = fopen(outputFilename.c_str(), "wb"); //binary
+	fprintf(fp, "P6\n%d %d\n255\n", rows, columns);
+	for (int i = 0; i < rows; i++) {
+		for (int j = 0; j < columns; j++) {
+			unsigned char color[3];
+			color[0] = (unsigned char)(outputPixels[i][j].x >= 1.0 ? 255 : (outputPixels[i][j].x <= 0.0 ? 0 : (int)floor(outputPixels[i][j].x  * 256.0)));  // red
+			color[1] = (unsigned char)(outputPixels[i][j].y >= 1.0 ? 255 : (outputPixels[i][j].y <= 0.0 ? 0 : (int)floor(outputPixels[i][j].y  * 256.0)));  // green
+			color[2] = (unsigned char)(outputPixels[i][j].z >= 1.0 ? 255 : (outputPixels[i][j].z <= 0.0 ? 0 : (int)floor(outputPixels[i][j].z  * 256.0)));  // blue 
+			fwrite(color, 1, 3, fp);
+		}
+	}
+	fclose(fp);
 }
