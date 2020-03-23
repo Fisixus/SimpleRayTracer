@@ -24,7 +24,7 @@ color3 trace(Ray &ray);
 bool isVisible(LightSource &lightSource);
 color3 objectAmbientColor();
 color3 phongModel(LightSource &lightSource);
-
+void findVisibleRoots(Object3D &obj3D, Ray &ray);
 
 
 color3** outputPixels;
@@ -41,7 +41,7 @@ Camera camera;
 point3 sphereIntersectionPoint;
 vec3 sphereIntersectionNormal;
 int whichObjectNum = 0;
-bool visibilityControl = false;
+vector<float> visibleRoots;
 
 int main(int argc, char **argv) {
 	initiliazeSceneValues();
@@ -86,7 +86,6 @@ void initiliazeSceneValues() {
 
 color3 trace(Ray &ray) {
 	color3 localC;
-	visibilityControl = false;
 	int counter = 0;
 	for (auto &obj3D : object3Ds) // access by reference to avoid copying
 	{
@@ -143,14 +142,73 @@ color3 objectAmbientColor() {
 
 
 bool isVisible(LightSource &lightSource) {
-	visibilityControl = true;
-	//sphereIntersection Point to lightSource
+	visibleRoots.clear();
 	Ray ray;
-	ray.origin = sphereIntersectionPoint;
-	ray.direction = normalize(lightSource.pos - ray.origin);
-	ray.destination = lightSource.pos;
-	int intersectionControl = sphereIntersectionControl(object3Ds[whichObjectNum], ray, whichObjectNum);
-	return intersectionControl == InterSection;
+	ray.origin = lightSource.pos;
+	ray.direction = normalize(sphereIntersectionPoint - ray.origin);
+	ray.destination = sphereIntersectionPoint;
+
+	for (auto &obj3D : object3Ds) // access by reference to avoid copying
+	{
+		findVisibleRoots(obj3D, ray);
+	}
+
+	float min = FLT_MAX;
+	for (int i = 0; i < visibleRoots.size(); i++) {
+		if (visibleRoots[i] >= 0 && visibleRoots[i] <= min) {
+			min = visibleRoots[i];
+		}
+	}
+	vec3 newPoint = ray.origin + min * ray.direction;
+	if (min > 0 && -EPS < (newPoint.x - sphereIntersectionPoint.x) && (newPoint.x - sphereIntersectionPoint.x) < EPS
+		&& -EPS < (newPoint.y - sphereIntersectionPoint.y) && (newPoint.y - sphereIntersectionPoint.y) < EPS
+		&& -EPS < (newPoint.z - sphereIntersectionPoint.z) && (newPoint.z - sphereIntersectionPoint.z) < EPS) {
+		return true;
+	}
+	return false;
+}
+
+void findVisibleRoots(Object3D &obj3D, Ray &ray) {
+	float radius = obj3D.radius;
+	string type = obj3D.type;
+	point3 center = obj3D.center;
+
+	point3 u = obj3D.center - ray.origin;
+	float a = dot(ray.direction, ray.direction);
+	float b = -2 * dot(ray.direction, u);
+	float c = dot(u, u) - pow(radius, 2);
+	//4(r^2-|u-(d.u)d|^2)
+	float n = dot(u - dot(ray.direction, u)* ray.direction, u - dot(ray.direction, u)* ray.direction);
+	float discriminant = 4 * (pow(radius, 2) - n);
+	if (discriminant < 0) { //no intersection
+		return ;
+	}
+
+	else { //intersection
+
+		float firstRoot = (-b - sqrt(discriminant)) / (2.0*a);
+		float secondRoot = (-b + sqrt(discriminant)) / (2.0*a);
+
+		if (firstRoot < 0 && secondRoot < 0) {
+			return;
+		}
+
+		else if (firstRoot > 0 && secondRoot < 0) {
+			//Intersection inside
+			visibleRoots.push_back(firstRoot);
+		}
+
+		else if (firstRoot < 0 && secondRoot > 0) {
+			//Intersection inside
+			visibleRoots.push_back(secondRoot);
+		}
+
+		else if (firstRoot > 0 && secondRoot > 0) {
+			visibleRoots.push_back(secondRoot);
+			visibleRoots.push_back(firstRoot);
+		}
+		return ;
+	}
 }
 
 int sphereIntersectionControl(Object3D &obj3D, Ray &ray, int counter) {
@@ -183,33 +241,27 @@ int sphereIntersectionControl(Object3D &obj3D, Ray &ray, int counter) {
 
 		else if (firstRoot > 0 && secondRoot < 0) {
 			//Intersection inside
-			if (!visibilityControl) {
-				sphereIntersectionPoint = ray.origin + firstRoot * ray.direction;
-				sphereIntersectionNormal = -normalize(sphereIntersectionPoint - obj3D.center);
-			}
+			sphereIntersectionPoint = ray.origin + firstRoot * ray.direction;
+			sphereIntersectionNormal = -normalize(sphereIntersectionPoint - obj3D.center);
 		}
 
 		else if (firstRoot < 0 && secondRoot > 0) {
 			//Intersection inside
-			if (!visibilityControl) {
-				sphereIntersectionPoint = ray.origin + secondRoot * ray.direction;
-				sphereIntersectionNormal = -normalize(sphereIntersectionPoint - obj3D.center);
-			}
+			sphereIntersectionPoint = ray.origin + secondRoot * ray.direction;
+			sphereIntersectionNormal = -normalize(sphereIntersectionPoint - obj3D.center);
 		}
 
 		else if (firstRoot > 0 && secondRoot > 0) {
-			if (!visibilityControl) {
-				if (firstRoot > secondRoot) {
-					sphereIntersectionPoint = ray.origin + secondRoot * ray.direction;
-					sphereIntersectionNormal = normalize(sphereIntersectionPoint - obj3D.center);
-				}
-				else {
-					sphereIntersectionPoint = ray.origin + firstRoot * ray.direction;
-					sphereIntersectionNormal = normalize(sphereIntersectionPoint - obj3D.center);
-				}
+			if (firstRoot > secondRoot) {
+				sphereIntersectionPoint = ray.origin + secondRoot * ray.direction;
+				sphereIntersectionNormal = normalize(sphereIntersectionPoint - obj3D.center);
+			}
+			else {
+				sphereIntersectionPoint = ray.origin + firstRoot * ray.direction;
+				sphereIntersectionNormal = normalize(sphereIntersectionPoint - obj3D.center);
 			}
 		}
-		if (!visibilityControl) whichObjectNum = counter;
+		whichObjectNum = counter;
 		return InterSection;
 	}
 	
