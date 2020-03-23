@@ -38,7 +38,6 @@ vector<Pigment> pigments;
 vector<Surface> surfaces;
 vector<Object3D> object3Ds;
 Camera camera;
-bool intersectionInInside = false;
 point3 sphereIntersectionPoint;
 vec3 sphereIntersectionNormal;
 int whichObjectNum = 0;
@@ -68,7 +67,7 @@ int main(int argc, char **argv) {
 			outputPixels[i][j] = trace(ray);
 		}
 	}
-	//writePixelsToOutputfile();
+	writePixelsToOutputfile();
 	return 0;
 }
 
@@ -93,8 +92,10 @@ color3 trace(Ray &ray) {
 	{
 		//check intersection for each object
 		status = sphereIntersectionControl(obj3D, ray, counter);
-		counter++;
-		if (status == No_InterSection)
+		if (status == InterSection) {
+			break;
+		}
+		if(++counter == object3Ds.size())
 			return background_color;
 	}
 
@@ -165,37 +166,37 @@ int sphereIntersectionControl(Object3D &obj3D, Ray &ray, int counter) {
 	float discriminant = 4*(pow(radius,2) - n );
 
 	if (discriminant < 0) { //no intersection
-		whichObjectNum = -1;
+		//whichObjectNum = -1;
 		return No_InterSection;
 	}
 
 	else { //intersection
 
-		float firstRoot = dot(ray.destination, u) + n;
-		float secondRoot = dot(ray.destination, u) - n;
+		float firstRoot = (-b - sqrt(discriminant)) / (2.0*a);
+		float secondRoot = (-b + sqrt(discriminant)) / (2.0*a);
 
-		if (firstRoot < EPS && secondRoot < EPS) {
-			whichObjectNum = -1;
+		if (firstRoot < 0 && secondRoot < 0) {
+			//whichObjectNum = -1;
 			return No_InterSection;
 		}
 
-		else if (firstRoot > EPS && secondRoot < EPS) {
-			intersectionInInside = true;
+		else if (firstRoot > 0 && secondRoot < 0) {
+			//Intersection inside
 			if (!visibilityControl) {
 				sphereIntersectionPoint = ray.origin + firstRoot * ray.direction;
 				sphereIntersectionNormal = -normalize(sphereIntersectionPoint - obj3D.center);
 			}
 		}
 
-		else if (firstRoot < EPS && secondRoot > EPS) {
-			intersectionInInside = true;
+		else if (firstRoot < 0 && secondRoot > 0) {
+			//Intersection inside
 			if (!visibilityControl) {
 				sphereIntersectionPoint = ray.origin + secondRoot * ray.direction;
 				sphereIntersectionNormal = -normalize(sphereIntersectionPoint - obj3D.center);
 			}
 		}
 
-		else if (firstRoot > EPS && secondRoot > EPS) {
+		else if (firstRoot > 0 && secondRoot > 0) {
 			if (!visibilityControl) {
 				if (firstRoot > secondRoot) {
 					sphereIntersectionPoint = ray.origin + secondRoot * ray.direction;
@@ -207,7 +208,7 @@ int sphereIntersectionControl(Object3D &obj3D, Ray &ray, int counter) {
 				}
 			}
 		}
-		whichObjectNum = counter;
+		if (!visibilityControl) whichObjectNum = counter;
 		return InterSection;
 	}
 	
