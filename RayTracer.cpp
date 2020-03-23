@@ -101,9 +101,10 @@ color3 trace(Ray &ray) {
 
 	localC = (0, 0, 0);
 	localC = objectAmbientColor();
-
+	counter = 0;
 	for (auto &lightSource : lightSources) // access by reference to avoid copying
 	{
+		if (counter++ == 0) continue; //First lightsource is for ambience
 		if (isVisible(lightSource)) {  // check shadow ray
 			localC += phongModel(lightSource);
 		}
