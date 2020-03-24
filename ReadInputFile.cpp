@@ -167,7 +167,7 @@ const int ReadInputFile::getHeight() {
 }
 
 const Camera &ReadInputFile::getCamera() {
-	return this->camera;
+	return camera;
 }
 
 const vector<LightSource> &ReadInputFile::getLightSources() {

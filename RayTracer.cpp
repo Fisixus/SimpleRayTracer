@@ -24,12 +24,12 @@ color3 trace(Ray &ray);
 bool isVisible(LightSource &lightSource);
 color3 objectAmbientColor();
 color3 phongModel(LightSource &lightSource);
-void findVisibleRoots(Object3D &obj3D, Ray &ray);
+void findIntersectedRoots(Object3D &obj3D, Ray &ray);
 
 
 color3** outputPixels;
 ReadInputFile rif;
-string inputFilename = "test1.in";
+string inputFilename;
 string outputFilename;
 int columns;
 int rows;
@@ -44,6 +44,19 @@ int whichObjectNum = 0;
 vector<float> visibleRoots;
 
 int main(int argc, char **argv) {
+	if (argc <= 1)
+	{
+		// On some operating systems, argv[0] can end up as an empty string instead of the program's name.
+		// We'll conditionalize our response on whether argv[0] is empty or not.
+		if (argv[0])
+			std::cout << "Usage: " << argv[0] << " <number>" << '\n';
+		else
+			std::cout << "Usage: <program name> <number>" << '\n';
+
+		std::exit(1);
+	}
+	inputFilename.assign(argv[1]);
+
 	initiliazeSceneValues();
 	outputPixels = new vec3*[rows];
 	for (int i = 0; i < rows; i++) {
@@ -82,7 +95,6 @@ void initiliazeSceneValues() {
 	object3Ds = rif.getObject3Ds();
 	outputFilename = rif.getOutputFileName();
 }
-
 
 color3 trace(Ray &ray) {
 	color3 localC;
@@ -140,7 +152,6 @@ color3 objectAmbientColor() {
 	return Ia * pigmentColor;
 }
 
-
 bool isVisible(LightSource &lightSource) {
 	visibleRoots.clear();
 	Ray ray;
@@ -150,25 +161,26 @@ bool isVisible(LightSource &lightSource) {
 
 	for (auto &obj3D : object3Ds) // access by reference to avoid copying
 	{
-		findVisibleRoots(obj3D, ray);
+		findIntersectedRoots(obj3D, ray);
 	}
 
-	float min = FLT_MAX;
+	float minIntersectRoot = FLT_MAX;
 	for (int i = 0; i < visibleRoots.size(); i++) {
-		if (visibleRoots[i] >= 0 && visibleRoots[i] <= min) {
-			min = visibleRoots[i];
+		if (visibleRoots[i] >= 0 && visibleRoots[i] <= minIntersectRoot) {
+			minIntersectRoot = visibleRoots[i];
 		}
 	}
-	vec3 newPoint = ray.origin + min * ray.direction;
-	if (min > 0 && -EPS < (newPoint.x - sphereIntersectionPoint.x) && (newPoint.x - sphereIntersectionPoint.x) < EPS
-		&& -EPS < (newPoint.y - sphereIntersectionPoint.y) && (newPoint.y - sphereIntersectionPoint.y) < EPS
-		&& -EPS < (newPoint.z - sphereIntersectionPoint.z) && (newPoint.z - sphereIntersectionPoint.z) < EPS) {
+	point3 firstIntersectedPoint = ray.origin + minIntersectRoot * ray.direction;
+	if (minIntersectRoot > 0 
+		&& abs((firstIntersectedPoint.x - sphereIntersectionPoint.x)) < EPS
+		&& abs((firstIntersectedPoint.y - sphereIntersectionPoint.y)) < EPS
+		&& abs((firstIntersectedPoint.z - sphereIntersectionPoint.z)) < EPS) {
 		return true;
 	}
 	return false;
 }
 
-void findVisibleRoots(Object3D &obj3D, Ray &ray) {
+void findIntersectedRoots(Object3D &obj3D, Ray &ray) {
 	float radius = obj3D.radius;
 	string type = obj3D.type;
 	point3 center = obj3D.center;
@@ -225,7 +237,7 @@ int sphereIntersectionControl(Object3D &obj3D, Ray &ray, int counter) {
 	float discriminant = 4*(pow(radius,2) - n );
 
 	if (discriminant < 0) { //no intersection
-		//whichObjectNum = -1;
+		whichObjectNum = -1;
 		return No_InterSection;
 	}
 
@@ -235,7 +247,7 @@ int sphereIntersectionControl(Object3D &obj3D, Ray &ray, int counter) {
 		float secondRoot = (-b + sqrt(discriminant)) / (2.0*a);
 
 		if (firstRoot < 0 && secondRoot < 0) {
-			//whichObjectNum = -1;
+			whichObjectNum = -1;
 			return No_InterSection;
 		}
 
@@ -273,9 +285,37 @@ void writePixelsToOutputfile() {
 	for (int i = 0; i < rows; i++) {
 		for (int j = 0; j < columns; j++) {
 			unsigned char color[3];
-			color[0] = (unsigned char)(outputPixels[i][j].x >= 1.0 ? 255 : (outputPixels[i][j].x <= 0.0 ? 0 : (int)floor(outputPixels[i][j].x  * 256.0)));  // red
-			color[1] = (unsigned char)(outputPixels[i][j].y >= 1.0 ? 255 : (outputPixels[i][j].y <= 0.0 ? 0 : (int)floor(outputPixels[i][j].y  * 256.0)));  // green
-			color[2] = (unsigned char)(outputPixels[i][j].z >= 1.0 ? 255 : (outputPixels[i][j].z <= 0.0 ? 0 : (int)floor(outputPixels[i][j].z  * 256.0)));  // blue 
+			//red
+			if ((outputPixels[i][j].x >= 1.0)) {
+				color[0] = 255;
+			} 
+			else if (outputPixels[i][j].x <= 0.0) {
+				color[0] = 0;
+			}
+			else {
+				color[0] = (int)floor(outputPixels[i][j].x  * 256.0);
+			}
+			//blue
+			if ((outputPixels[i][j].y >= 1.0)) {
+				color[1] = 255;
+			}
+			else if (outputPixels[i][j].y <= 0.0) {
+				color[1] = 0;
+			}
+			else {
+				color[1] = (int)floor(outputPixels[i][j].y  * 256.0);
+			}
+			//green
+			if ((outputPixels[i][j].z >= 1.0)) {
+				color[2] = 255;
+			}
+			else if (outputPixels[i][j].z <= 0.0) {
+				color[2] = 0;
+			}
+			else {
+				color[2] = (int)floor(outputPixels[i][j].z  * 256.0);
+			}
+
 			fwrite(color, 1, 3, fp);
 		}
 	}
