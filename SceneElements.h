@@ -24,7 +24,7 @@ typedef struct {
 }LightSource;
 
 typedef struct {
-	float ka, kd, ks, kr, shininess;
+	float ka, kd, ks, kr, kt, n2, shininess;
 }Surface;
 
 typedef struct {

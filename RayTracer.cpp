@@ -3,6 +3,7 @@
 
 using namespace Angel;
 using namespace std;
+#define n1 0.3
 #define EPS 0.001 //for numerical issues
 typedef vec3 point3;
 typedef vec3 color3;
@@ -21,6 +22,7 @@ void writePixelsToOutputfile();
 int sphereIntersectionControl(Object3D &obj3D, Ray &ray, int counter);
 color3 trace(Ray &ray, int depth);
 Ray reflect(Ray &ray);
+Ray transmit(Ray &ray, float n2);
 bool isVisible(LightSource &lightSource);
 color3 objectAmbientColor();
 color3 phongModel(LightSource &lightSource);
@@ -97,7 +99,7 @@ void initiliazeSceneValues() {
 }
 
 color3 trace(Ray &ray, int depth) {
-	color3 localC, reflectedC;
+	color3 localC, reflectedC, transmittedC;
 	int counter = 0;
 	if (depth > 4) return background_color;
 	for (auto &obj3D : object3Ds) // access by reference to avoid copying
@@ -126,7 +128,26 @@ color3 trace(Ray &ray, int depth) {
 		Ray rr = reflect(ray);
 		reflectedC = trace(rr, depth + 1);
 	}
-	return localC + surface.kr*reflectedC;
+	if (surface.kt > 0) {
+		Ray rt = transmit(ray, surface.n2);
+		transmittedC = trace(rt, depth + 1);
+	}
+	return localC + surface.kr*reflectedC + surface.kt*transmittedC;
+}
+
+Ray transmit(Ray &ray, float n2) {
+	vec3 v = -normalize(ray.direction);
+	float cosQ1 = dot(v, sphereIntersectionNormal);
+	vec3 u1 = cosQ1 * sphereIntersectionNormal;
+	vec3 w1 = u1 - v;
+	vec3 w2 = (n1 / n2)* w1;
+	
+	float cosQ2 = sqrtf(1 - (pow(n1 / n2, 2)*(1 - pow(dot(v, sphereIntersectionNormal), 2))));
+	vec3 u2 = -cosQ2 * sphereIntersectionNormal;
+	vec3 t = w2 + u2;
+	ray.origin = sphereIntersectionPoint;
+	ray.direction = normalize(t);
+	return ray;
 }
 
 Ray reflect(Ray &ray) {

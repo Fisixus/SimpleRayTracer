@@ -104,12 +104,14 @@ void ReadInputFile::readInputandFillSceneElements(string &inputFilename) {
 				for (int i = 0; i < totalNumofSurfaces; i++) {
 					stringstream ss(line);
 					Surface surface;
-					float ka, kd, ks, shineness, kr;
-					ss >> ka >> kd >> ks >> shineness >> kr;
+					float ka, kd, ks, shineness, kr, kt, n2;
+					ss >> ka >> kd >> ks >> shineness >> kr >> kt >> n2;
 					surface.ka = ka;
 					surface.kd = kd;
 					surface.ks = ks;
 					surface.kr = kr;
+					surface.kt = kt;
+					surface.n2 = n2;
 					surface.shininess = shineness;
 					surfaces.push_back(surface);
 					if (i == totalNumofSurfaces - 1)
