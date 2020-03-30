@@ -3,7 +3,6 @@
 
 using namespace Angel;
 using namespace std;
-
 #define EPS 0.001 //for numerical issues
 typedef vec3 point3;
 typedef vec3 color3;
@@ -20,7 +19,8 @@ typedef struct {
 void initiliazeSceneValues();
 void writePixelsToOutputfile();
 int sphereIntersectionControl(Object3D &obj3D, Ray &ray, int counter);
-color3 trace(Ray &ray);
+color3 trace(Ray &ray, int depth);
+Ray reflect(Ray &ray);
 bool isVisible(LightSource &lightSource);
 color3 objectAmbientColor();
 color3 phongModel(LightSource &lightSource);
@@ -77,7 +77,7 @@ int main(int argc, char **argv) {
 			ray.origin = camera.eye;
 			ray.direction = normalize(pixel - ray.origin);
 			ray.destination = pixel;
-			outputPixels[i][j] = trace(ray);
+			outputPixels[i][j] = trace(ray, 0);
 		}
 	}
 	writePixelsToOutputfile();
@@ -96,9 +96,10 @@ void initiliazeSceneValues() {
 	outputFilename = rif.getOutputFileName();
 }
 
-color3 trace(Ray &ray) {
-	color3 localC;
+color3 trace(Ray &ray, int depth) {
+	color3 localC, reflectedC;
 	int counter = 0;
+	if (depth > 4) return background_color;
 	for (auto &obj3D : object3Ds) // access by reference to avoid copying
 	{
 		//check intersection for each object
@@ -120,7 +121,19 @@ color3 trace(Ray &ray) {
 			localC += phongModel(lightSource);
 		}
 	}
-	return localC;
+	Surface surface = surfaces[object3Ds[whichObjectNum].numSurface];
+	if (surface.kr > 0) { //reflective surface
+		Ray rr = reflect(ray);
+		reflectedC = trace(rr, depth + 1);
+	}
+	return localC + surface.kr*reflectedC;
+}
+
+Ray reflect(Ray &ray) {
+	vec3 v = -normalize(ray.direction);
+	ray.origin = sphereIntersectionPoint;
+	ray.direction = normalize(2 * (dot(sphereIntersectionNormal, v)*sphereIntersectionNormal) - v);
+	return ray;
 }
 
 color3 phongModel(LightSource &lightSource) {
@@ -192,7 +205,7 @@ void findIntersectedRoots(Object3D &obj3D, Ray &ray) {
 	//4(r^2-|u-(d.u)d|^2)
 	float n = dot(u - dot(ray.direction, u)* ray.direction, u - dot(ray.direction, u)* ray.direction);
 	float discriminant = 4 * (pow(radius, 2) - n);
-	if (discriminant < 0) { //no intersection
+	if (discriminant < EPS) { //no intersection
 		return ;
 	}
 
@@ -201,21 +214,21 @@ void findIntersectedRoots(Object3D &obj3D, Ray &ray) {
 		float firstRoot = (-b - sqrt(discriminant)) / (2.0*a);
 		float secondRoot = (-b + sqrt(discriminant)) / (2.0*a);
 
-		if (firstRoot < 0 && secondRoot < 0) {
+		if (firstRoot < EPS && secondRoot < EPS) {
 			return;
 		}
 
-		else if (firstRoot > 0 && secondRoot < 0) {
+		else if (firstRoot > EPS && secondRoot < EPS) {
 			//Intersection inside
 			visibleRoots.push_back(firstRoot);
 		}
 
-		else if (firstRoot < 0 && secondRoot > 0) {
+		else if (firstRoot < EPS && secondRoot > EPS) {
 			//Intersection inside
 			visibleRoots.push_back(secondRoot);
 		}
 
-		else if (firstRoot > 0 && secondRoot > 0) {
+		else if (firstRoot > EPS && secondRoot > EPS) {
 			visibleRoots.push_back(secondRoot);
 			visibleRoots.push_back(firstRoot);
 		}
@@ -236,7 +249,7 @@ int sphereIntersectionControl(Object3D &obj3D, Ray &ray, int counter) {
 	float n = dot(u - dot(ray.direction, u)* ray.direction, u - dot(ray.direction, u)* ray.direction);
 	float discriminant = 4*(pow(radius,2) - n );
 
-	if (discriminant < 0) { //no intersection
+	if (discriminant < EPS) { //no intersection
 		whichObjectNum = -1;
 		return No_InterSection;
 	}
@@ -246,24 +259,24 @@ int sphereIntersectionControl(Object3D &obj3D, Ray &ray, int counter) {
 		float firstRoot = (-b - sqrt(discriminant)) / (2.0*a);
 		float secondRoot = (-b + sqrt(discriminant)) / (2.0*a);
 
-		if (firstRoot < 0 && secondRoot < 0) {
+		if (firstRoot < EPS && secondRoot < EPS) {
 			whichObjectNum = -1;
 			return No_InterSection;
 		}
 
-		else if (firstRoot > 0 && secondRoot < 0) {
+		else if (firstRoot > EPS && secondRoot < EPS) {
 			//Intersection inside
 			sphereIntersectionPoint = ray.origin + firstRoot * ray.direction;
 			sphereIntersectionNormal = -normalize(sphereIntersectionPoint - obj3D.center);
 		}
 
-		else if (firstRoot < 0 && secondRoot > 0) {
+		else if (firstRoot < EPS && secondRoot > EPS) {
 			//Intersection inside
 			sphereIntersectionPoint = ray.origin + secondRoot * ray.direction;
 			sphereIntersectionNormal = -normalize(sphereIntersectionPoint - obj3D.center);
 		}
 
-		else if (firstRoot > 0 && secondRoot > 0) {
+		else if (firstRoot > EPS && secondRoot > EPS) {
 			if (firstRoot > secondRoot) {
 				sphereIntersectionPoint = ray.origin + secondRoot * ray.direction;
 				sphereIntersectionNormal = normalize(sphereIntersectionPoint - obj3D.center);
