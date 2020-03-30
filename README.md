@@ -1,4 +1,4 @@
-# Sphere Ray Tracer
+# Simple Ray Tracer
 This program take as input(*.in files) a description of the scene objects, the lights and the viewing parameters. It will produce a .ppm file containing the ray-traced image of the scene. Program takes the input filename as a command line argument.
 ### Scene Elements ###
 - Sphere Objects
