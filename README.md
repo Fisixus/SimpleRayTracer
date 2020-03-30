@@ -5,6 +5,8 @@ This program take as input(*.in files) a description of the scene objects, the l
 - Solid Colored Objects
 - Ambient, Diffuse and Specular Shading
 - Shadow
+- Reflection
+- Refraction
 ### Format of Input Files ###
 **Output File:**  The first line of the input file will contain the name of the output file.The second line will contain 2 integers denoting the width and the height of the final image. For example
 
@@ -32,7 +34,7 @@ and maps it to an RGB value. In this project you will need to support solid colo
 same color.
 
 **Surface Finishes:** The next line contains the number of surface finishes, numF, followed by a sequence of as many lines each containing the description of one set of surface finish parameters. The surface finishes are numbered from 0 to numF - 1. Each surface finish consists of the following five scalar values: the ambient coeficient ka, diffuse coefficient kd, specular
-coefficient ks, the shininess a, and reflectivity coefficient kr.
+coefficient ks, the shininess a, reflectivity coefficient kr, refraction coefficient kt and n2.
 
 **Objects:** The next line contains the number of objects, followed by as many lines (one per object).
 Each line starts with two integers. The first integer corresponds to the pigment number
@@ -42,10 +44,12 @@ parameters.
 
 **You can open the .ppm files using GIMP or Adobe Photoshop.**
 
-**test1.in**
+**test1.in**      **test2.in**
 
-<img src="https://media.giphy.com/media/H42cE4itCKx1yNGMyV/giphy.gif" width="500" height="500" />
+<img src="https://media.giphy.com/media/H42cE4itCKx1yNGMyV/giphy.gif" width="300" height="300" />
+<img src="https://media.giphy.com/media/H54eFAftn4snAdz5r6/giphy.gif" width="300" height="300" />
 
-**test2.in**
+**test2reflective.in**  **test2refractive.in**
 
-<img src="https://media.giphy.com/media/H54eFAftn4snAdz5r6/giphy.gif" width="500" height="500" />
+<img src="https://media.giphy.com/media/YQ4qknx4BtDNubEXdd/giphy.gif" width="300" height="300" />
+<img src="https://media.giphy.com/media/lNQuTOAEYRf9FK15pg/giphy.gif" width="300" height="300" />
